@@ -226,6 +226,7 @@ void InitD3D();
 void InitWindow(HINSTANCE hInstance);
 void InitCamera();
 void PrintShaderError(ID3DBlob* e);
+void ResizeSwapChain(int width, int height);
 
 bool IntersectRayAABB(XMVECTOR rayOrigin, XMVECTOR rayDir, XMVECTOR aabbMin, XMVECTOR aabbMax, float& dist);
 
@@ -336,6 +337,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     switch (msg)
     {
+        case WM_SIZE:
+        {
+            if (device != nullptr && wParam != SIZE_MINIMIZED)
+            {
+                ResizeSwapChain(LOWORD(lParam), HIWORD(lParam));
+            }
+
+            return 0;
+        }
         case WM_LBUTTONDOWN:
         {
             if (ImGui::GetIO().WantCaptureMouse || g_sceneObjects.empty())
@@ -677,32 +687,30 @@ void InitWindow(HINSTANCE hInstance)
     ShowWindow(hWnd, SW_SHOW);
 }
 
-void InitD3D()
+void ResizeSwapChain(int width, int height)
 {
-    RECT rc;
+    if (!swapChain)
+    {
+        return;
+    }
 
-    GetClientRect(hWnd, &rc);
+    if (rtv)
+    {
+        rtv->Release();
+    }
+    if (dsv)
+    {
+        dsv->Release();
+    }
 
-    UINT width = rc.right - rc.left;
-    UINT height = rc.bottom - rc.top;
+    context->OMSetRenderTargets(0, 0, 0);
 
-    DXGI_SWAP_CHAIN_DESC scd = {};
+    swapChain->ResizeBuffers(1, width, height, DXGI_FORMAT_R8G8B8A8_UNORM, 0);
 
-    scd.BufferCount = 1;
-    scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    scd.BufferDesc.Width = width;
-    scd.BufferDesc.Height = height;
-    scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    scd.OutputWindow = hWnd;
-    scd.SampleDesc.Count = 1;
-    scd.Windowed = TRUE;
+    ID3D11Texture2D* backBuffer;
 
-    D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &scd, &swapChain, &device, nullptr, &context);
-
-    ID3D11Texture2D* backBuffer = nullptr;
-
-    swapChain->GetBuffer(0, IID_PPV_ARGS(&backBuffer));
-    device->CreateRenderTargetView(backBuffer, nullptr, &rtv);
+    swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backBuffer);
+    device->CreateRenderTargetView(backBuffer, NULL, &rtv);
 
     backBuffer->Release();
 
@@ -733,6 +741,32 @@ void InitD3D()
     vp.MaxDepth = 1.0f;
 
     context->RSSetViewports(1, &vp);
+}
+
+void InitD3D()
+{
+    RECT rc;
+
+    GetClientRect(hWnd, &rc);
+
+    UINT width = rc.right - rc.left;
+    UINT height = rc.bottom - rc.top;
+
+    DXGI_SWAP_CHAIN_DESC scd = {};
+
+    scd.BufferCount = 1;
+    scd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    scd.BufferDesc.Width = width;
+    scd.BufferDesc.Height = height;
+    scd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    scd.OutputWindow = hWnd;
+    scd.SampleDesc.Count = 1;
+    scd.Windowed = TRUE;
+
+    D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &scd, &swapChain, &device, nullptr, &context);
+
+    GetClientRect(hWnd, &rc);
+    ResizeSwapChain(rc.right - rc.left, rc.bottom - rc.top);
 
     D3D11_BUFFER_DESC vbd = { sizeof(vertices), D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER };
     D3D11_SUBRESOURCE_DATA vinit = { vertices };
@@ -853,6 +887,7 @@ void InitD3D()
     rd.DepthClipEnable = TRUE;
 
     device->CreateRasterizerState(&rd, &rasterState);
+
     context->RSSetState(rasterState);
 
     IMGUI_CHECKVERSION();
