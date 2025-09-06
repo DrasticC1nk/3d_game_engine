@@ -1,3 +1,5 @@
+#define NOMINMAX
+
 #include <windows.h>
 #include <d3d11.h>
 #include <d3dcompiler.h>
@@ -5,6 +7,10 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <fstream>      
+#include <Commdlg.h>
+#include <limits>
+#include <sstream>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_win32.h"
@@ -14,6 +20,7 @@
 #pragma comment(lib, "D3DCompiler.lib")
 
 using namespace DirectX;
+using namespace std;
 
 HWND hWnd = nullptr;
 ID3D11Device* device = nullptr;
@@ -65,7 +72,7 @@ struct SceneObject
 {
     int id;
 
-    std::string name;
+    string name;
 
     XMFLOAT3 position = { 0.0f, 0.5f, 0.0f };
     XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f }; 
@@ -78,11 +85,11 @@ struct SceneObject
 
     SceneObject(int unique_id) : id(unique_id)
     {
-        name = "Cube " + std::to_string(id);
+        name = "Cube " + to_string(id);
     }
 };
 
-std::vector<SceneObject> g_sceneObjects;
+vector<SceneObject> g_sceneObjects;
 
 int g_selectedObjectIndex = -1; 
 int g_nextObjectID = 1;
@@ -227,6 +234,10 @@ void InitWindow(HINSTANCE hInstance);
 void InitCamera();
 void PrintShaderError(ID3DBlob* e);
 void ResizeSwapChain(int width, int height);
+void SaveScene();
+void OpenScene();
+void WriteSceneToFile(const string& filepath);
+void ReadSceneFromFile(const string& filepath);
 
 bool IntersectRayAABB(XMVECTOR rayOrigin, XMVECTOR rayDir, XMVECTOR aabbMin, XMVECTOR aabbMax, float& dist);
 
@@ -335,7 +346,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
 
-    switch (msg)
+    switch (msg) 
     {
         case WM_SIZE:
         {
@@ -538,6 +549,23 @@ void Render()
 
     ImGui::NewFrame();
 
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Save Scene"))
+            {
+                SaveScene();
+            }
+            if (ImGui::MenuItem("Open Scene"))
+            {
+                OpenScene();
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
     ImGui::Begin("Scene Controls");
 
     if (ImGui::Button("Add Cube"))
@@ -671,6 +699,198 @@ void Render()
     swapChain->Present(1, 0);
 }
 
+void SaveScene()
+{
+    OPENFILENAMEA ofn;
+
+    char szFile[260] = "scene.ini"; 
+
+    ZeroMemory(&ofn, sizeof(ofn));
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hWnd;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = "INI Files (*.ini)\0*.ini\0All Files (*.*)\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_OVERWRITEPROMPT;
+
+    if (GetSaveFileNameA(&ofn) == TRUE)
+    {
+        WriteSceneToFile(ofn.lpstrFile);
+    }
+}
+
+void OpenScene()
+{
+    OPENFILENAMEA ofn;
+
+    char szFile[260] = { 0 };
+
+    ZeroMemory(&ofn, sizeof(ofn));
+
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = hWnd;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = "INI Files (*.ini)\0*.ini\0All Files (*.*)\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+    if (GetOpenFileNameA(&ofn) == TRUE)
+    {
+        ReadSceneFromFile(ofn.lpstrFile);
+    }
+}
+
+void WriteSceneToFile(const string& filepath)
+{
+    ofstream outFile(filepath);
+
+    if (!outFile.is_open()) 
+    {
+        MessageBox(hWnd, L"Failed to open file for writing.", L"Error", MB_OK);
+
+        return;
+    }
+
+    outFile << "[Scene]" << endl;
+    outFile << "NextObjectID=" << g_nextObjectID << endl;
+    outFile << "ObjectCount=" << g_sceneObjects.size() << endl;
+    outFile << endl; 
+
+    for (const auto& obj : g_sceneObjects)
+    {
+        outFile << "[Cube_" << obj.id << "]" << endl;
+        outFile << "Name=" << obj.name << endl;
+        outFile << "Position=" << obj.position.x << " " << obj.position.y << " " << obj.position.z << endl;
+        outFile << "Rotation=" << obj.rotation.x << " " << obj.rotation.y << " " << obj.rotation.z << endl;
+        outFile << "Scale=" << obj.scale.x << " " << obj.scale.y << " " << obj.scale.z << endl;
+        outFile << "AutoRotate=" << obj.enableAutoRotation << endl;
+        outFile << "UseLighting=" << obj.applyLighting << endl;
+        outFile << endl; 
+    }
+
+    outFile.close();
+}
+
+void ReadSceneFromFile(const string& filepath)
+{
+    ifstream inFile(filepath);
+
+    if (!inFile.is_open()) 
+    {
+        MessageBox(hWnd, L"Failed to open file for reading.", L"Error", MB_OK);
+
+        return;
+    }
+
+    g_sceneObjects.clear();
+    g_selectedObjectIndex = -1;
+
+    string line;
+
+    int objectCount = 0;
+
+    while (getline(inFile, line))
+    {
+        if (line.find("[Scene]") != string::npos) 
+        {
+            continue;
+        }
+        if (line.find("NextObjectID=") != string::npos) 
+        {
+            g_nextObjectID = stoi(line.substr(line.find("=") + 1));
+        }
+        if (line.find("ObjectCount=") != string::npos) 
+        {
+            objectCount = stoi(line.substr(line.find("=") + 1));
+
+            break; 
+        }
+    }
+
+    if (objectCount == 0) 
+    {
+        inFile.close();
+
+        return;
+    }
+
+    for (int i = 0; i < objectCount; ++i)
+    {
+        int currentId = -1;
+ 
+        while (getline(inFile, line)) 
+        {
+            if (line.find("[Cube_") != string::npos) 
+            {
+                string idStr = line.substr(line.find("_") + 1, line.find("]") - line.find("_") - 1);
+
+                currentId = stoi(idStr);
+
+                break;
+            }
+        }
+
+        if (currentId == -1)
+        {
+            continue;
+        }
+
+        SceneObject newObj(currentId);
+
+        while (getline(inFile, line) && !line.empty()) 
+        {
+            size_t separatorPos = line.find("=");
+
+            if (separatorPos == string::npos)
+            {
+                continue;
+            }
+
+            string key = line.substr(0, separatorPos);
+            string value = line.substr(separatorPos + 1);
+            stringstream ss(value);
+
+            if (key == "Name") 
+            {
+                newObj.name = value;
+            }
+            else if (key == "Position") 
+            {
+                ss >> newObj.position.x >> newObj.position.y >> newObj.position.z;
+            }
+            else if (key == "Rotation") 
+            {
+                ss >> newObj.rotation.x >> newObj.rotation.y >> newObj.rotation.z;
+            }
+            else if (key == "Scale") 
+            {
+                ss >> newObj.scale.x >> newObj.scale.y >> newObj.scale.z;
+            }
+            else if (key == "AutoRotate") 
+            {
+                newObj.enableAutoRotation = stoi(value);
+            }
+            else if (key == "UseLighting") 
+            {
+                newObj.applyLighting = stoi(value);
+            }
+        }
+
+        g_sceneObjects.push_back(newObj);
+    }
+
+    inFile.close();
+}
+
 void InitWindow(HINSTANCE hInstance)
 {
     WNDCLASS wc = {};
@@ -782,7 +1002,7 @@ void InitD3D()
 
     device->CreateBuffer(&cbd, nullptr, &constantBuffer);
 
-    std::vector<Vertex> gridLines;
+    vector<Vertex> gridLines;
 
     int gridSize = 20;
 
@@ -918,7 +1138,7 @@ void PrintShaderError(ID3DBlob* e)
 {
     if (e)
     {
-        std::cerr << "Shader compile error:\n" << (const char*)e->GetBufferPointer() << std::endl;
+        cerr << "Shader compile error:\n" << (const char*)e->GetBufferPointer() << endl;
     }
 }
 
