@@ -175,26 +175,26 @@ void CreateCube(vector<Vertex>& outVertices, vector<UINT>& outIndices)
     };
 }
 
-void CreatePyramid(vector<Vertex>& outVertices, vector<UINT>& outIndices)
+void CreatePyramid(std::vector<Vertex>& outVertices, std::vector<UINT>& outIndices)
 {
     outVertices =
     {
-        { {-0.5f, 0.0f,  0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
-        { { 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+        { {-0.5f, 0.0f, 0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { { 0.5f, 0.0f, 0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
         { { 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-        { {-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-
-        { {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-        { {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
-        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
-        { {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }
+        { {-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, { 0.0f, 0.0f, -1.0f} }, 
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, { 1.0f, 0.0f, 0.0f} }, 
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, { 0.0f, 0.0f, 1.0f} },
+        { {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} } 
     };
 
     outIndices =
     {
-        0, 1, 2, 0, 2, 3, 3, 2, 4, 2, 1, 5, 1, 0, 6, 0, 3, 7
+        0, 2, 1, 0, 3, 2, 3, 4, 2, 2, 5, 1, 1, 6, 0, 0, 7, 3    
     };
 }
+
 
 void CreateSphere(vector<Vertex>& outVertices, vector<UINT>& outIndices, float radius, UINT sliceCount, UINT stackCount)
 {
@@ -356,7 +356,6 @@ const char* psSource = R"(
 const char* psOutlineSource = R"(
     float4 main() : SV_TARGET
     {
-        // Solid orange color for the outline
         return float4(1.0f, 0.65f, 0.0f, 1.0f);
     }
 )";
