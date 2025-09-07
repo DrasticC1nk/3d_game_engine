@@ -11,6 +11,7 @@
 #include <Commdlg.h>
 #include <limits>
 #include <sstream>
+#include <map>
 
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_win32.h"
@@ -51,6 +52,35 @@ float g_yaw = 0.0f;
 float g_pitch = 0.0f;
 bool g_mouseCaptured = false;
 
+enum class ShapeType
+{
+    Cube,
+    Pyramid,
+    Sphere
+};
+
+struct Mesh
+{
+    ID3D11Buffer* vertexBuffer = nullptr;
+    ID3D11Buffer* indexBuffer = nullptr;
+
+    UINT indexCount = 0;
+
+    ~Mesh()
+    {
+        if (vertexBuffer)
+        {
+            vertexBuffer->Release();
+        }
+        if (indexBuffer)
+        {
+            indexBuffer->Release();
+        }
+    }
+};
+
+map<ShapeType, Mesh> g_meshes;
+
 struct Vertex
 {
     XMFLOAT3 pos;
@@ -74,6 +104,8 @@ struct SceneObject
 
     string name;
 
+    ShapeType type;
+
     XMFLOAT3 position = { 0.0f, 0.5f, 0.0f };
     XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f }; 
     XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
@@ -83,9 +115,22 @@ struct SceneObject
 
     float autoRotationAngle = 0.0f;
 
-    SceneObject(int unique_id) : id(unique_id)
+    SceneObject(int unique_id, ShapeType shape_type) : id(unique_id), type(shape_type)
     {
-        name = "Cube " + to_string(id);
+        switch (type)
+        {
+        case ShapeType::Cube:    
+
+            name = "Cube " + to_string(id); break;
+
+        case ShapeType::Pyramid: 
+
+            name = "Pyramid " + to_string(id); break;
+
+        case ShapeType::Sphere:  
+
+            name = "Sphere " + to_string(id); break;
+        }
     }
 };
 
@@ -94,34 +139,132 @@ vector<SceneObject> g_sceneObjects;
 int g_selectedObjectIndex = -1; 
 int g_nextObjectID = 1;
 
-Vertex vertices[] =
+void CreateCube(vector<Vertex>& outVertices, vector<UINT>& outIndices)
 {
-    { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-    { {-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-    { { 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
-    { { 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
-    { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f,  1.0f} },
-    { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f,  1.0f} },
-    { { 0.5f,  0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 0.0f,  1.0f} },
-    { {-0.5f,  0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f,  1.0f} },
-    { {-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f,  0.0f} },
-    { {-0.5f,  0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f,  0.0f} },
-    { { 0.5f,  0.5f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f,  0.0f} },
-    { { 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f,  0.0f} },
-    { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
-    { { 0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-    { { 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
-    { {-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
-    { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
-    { {-0.5f,  0.5f,  0.5f}, {1.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
-    { {-0.5f,  0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
-    { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
-    { { 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
-    { { 0.5f,  0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
-    { { 0.5f,  0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
-    { { 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} }
-};
-unsigned int indices[] = { 0,1,2,0,2,3,4,5,6,4,6,7,8,9,10,8,10,11,12,13,14,12,14,15,16,17,18,16,18,19,20,21,22,20,22,23 };
+    outVertices = 
+    {
+        { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
+        { {-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
+        { { 0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
+        { { 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -1.0f} },
+        { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },
+        { { 0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
+        { { 0.5f, 0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
+        { {-0.5f, 0.5f,  0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f} },
+        { {-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
+        { {-0.5f, 0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
+        { { 0.5f, 0.5f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} },
+        { { 0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f} },
+        { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
+        { { 0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+        { { 0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+        { {-0.5f, -0.5f,  0.5f}, {0.0f, 0.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
+        { {-0.5f, -0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
+        { {-0.5f, 0.5f,  0.5f}, {1.0f, 1.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
+        { {-0.5f, 0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {-1.0f, 0.0f, 0.0f} },
+        { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} },
+        { { 0.5f, -0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
+        { { 0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
+        { { 0.5f, 0.5f,  0.5f}, {1.0f, 1.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} },
+        { { 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} }
+    };
+
+    outIndices = 
+    {
+        0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23
+    };
+}
+
+void CreatePyramid(vector<Vertex>& outVertices, vector<UINT>& outIndices)
+{
+    outVertices = 
+    {
+        { {-0.5f, 0.0f,  0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { { 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { { 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { {-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+
+        { {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} }, 
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },  
+        { {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }  
+    };
+
+    outIndices = 
+    {
+        0, 1, 2, 0, 2, 3, 3, 2, 4, 2, 1, 5, 1, 0, 6, 0, 3, 7  
+    };
+}
+
+void CreateSphere(vector<Vertex>& outVertices, vector<UINT>& outIndices, float radius, UINT sliceCount, UINT stackCount)
+{
+    outVertices.clear();
+    outIndices.clear();
+
+    outVertices.push_back({ {0.0f, radius, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f} });
+
+    float phiStep = XM_PI / stackCount;
+    float thetaStep = 2.0f * XM_PI / sliceCount;
+
+    for (UINT i = 1; i <= stackCount - 1; ++i)
+    {
+        float phi = i * phiStep;
+
+        for (UINT j = 0; j <= sliceCount; ++j)
+        {
+            float theta = j * thetaStep;
+
+            Vertex v;
+
+            v.pos.x = radius * sinf(phi) * cosf(theta);
+            v.pos.y = radius * cosf(phi);
+            v.pos.z = radius * sinf(phi) * sinf(theta);
+
+            XMStoreFloat3(&v.normal, XMVector3Normalize(XMLoadFloat3(&v.pos)));
+
+            v.color = { v.normal.x, v.normal.y, v.normal.z }; // Color based on normal
+
+            outVertices.push_back(v);
+        }
+    }
+
+    outVertices.push_back({ {0.0f, -radius, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} });
+
+    for (UINT i = 1; i <= sliceCount; ++i)
+    {
+        outIndices.push_back(0);
+        outIndices.push_back(i + 1);
+        outIndices.push_back(i);
+    }
+
+    UINT baseIndex = 1;
+    UINT ringVertexCount = sliceCount + 1;
+
+    for (UINT i = 0; i < stackCount - 2; ++i)
+    {
+        for (UINT j = 0; j < sliceCount; ++j)
+        {
+            outIndices.push_back(baseIndex + i * ringVertexCount + j);
+            outIndices.push_back(baseIndex + i * ringVertexCount + j + 1);
+            outIndices.push_back(baseIndex + (i + 1) * ringVertexCount + j);
+
+            outIndices.push_back(baseIndex + (i + 1) * ringVertexCount + j);
+            outIndices.push_back(baseIndex + i * ringVertexCount + j + 1);
+            outIndices.push_back(baseIndex + (i + 1) * ringVertexCount + j + 1);
+        }
+    }
+
+    UINT southPoleIndex = (UINT)outVertices.size() - 1;
+
+    baseIndex = southPoleIndex - ringVertexCount;
+
+    for (UINT i = 0; i < sliceCount; ++i)
+    {
+        outIndices.push_back(southPoleIndex);
+        outIndices.push_back(baseIndex + i);
+        outIndices.push_back(baseIndex + i + 1);
+    }
+}
 
 const char* vsSource = R"(
     cbuffer ConstantBuffer : register(b0)
@@ -333,6 +476,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     {
         device->Release();
     }
+
+    g_meshes.clear();
 
     return 0;
 }
@@ -568,9 +713,15 @@ void Render()
 
     ImGui::Begin("Scene Controls");
 
-    if (ImGui::Button("Add Cube"))
+    const char* items[] = { "Cube", "Pyramid", "Sphere" };
+
+    static int currentItem = 0;
+
+    ImGui::Combo("Shape to Add", &currentItem, items, IM_ARRAYSIZE(items));
+
+    if (ImGui::Button("Add Shape"))
     {
-        g_sceneObjects.emplace_back(g_nextObjectID++);
+        g_sceneObjects.emplace_back(g_nextObjectID++, static_cast<ShapeType>(currentItem));
     }
 
     ImGui::Separator();
@@ -650,6 +801,12 @@ void Render()
     {
         SceneObject& obj = g_sceneObjects[i];
 
+        Mesh& currentMesh = g_meshes[obj.type];
+
+        context->IASetVertexBuffers(0, 1, &currentMesh.vertexBuffer, &stride, &offset);
+        context->IASetIndexBuffer(currentMesh.indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
         if (obj.enableAutoRotation)
         {
             obj.autoRotationAngle += 0.005f;
@@ -671,7 +828,7 @@ void Render()
             cb.model = XMMatrixTranspose(outlineScaleMat * modelMat);
 
             context->UpdateSubresource(constantBuffer, 0, 0, &cb, 0, 0);
-            context->DrawIndexed(36, 0, 0);
+            context->DrawIndexed(currentMesh.indexCount, 0, 0);
         }
 
         context->RSSetState(rasterState);
@@ -680,7 +837,7 @@ void Render()
         cb.model = XMMatrixTranspose(modelMat);
 
         context->UpdateSubresource(constantBuffer, 0, 0, &cb, 0, 0);
-        context->DrawIndexed(36, 0, 0);
+        context->DrawIndexed(currentMesh.indexCount, 0, 0);
     }
 
     context->IASetVertexBuffers(0, 1, &gridVertexBuffer, &stride, &offset);
@@ -753,7 +910,7 @@ void WriteSceneToFile(const string& filepath)
 {
     ofstream outFile(filepath);
 
-    if (!outFile.is_open()) 
+    if (!outFile.is_open())
     {
         MessageBox(hWnd, L"Failed to open file for writing.", L"Error", MB_OK);
 
@@ -763,18 +920,19 @@ void WriteSceneToFile(const string& filepath)
     outFile << "[Scene]" << endl;
     outFile << "NextObjectID=" << g_nextObjectID << endl;
     outFile << "ObjectCount=" << g_sceneObjects.size() << endl;
-    outFile << endl; 
+    outFile << endl;
 
     for (const auto& obj : g_sceneObjects)
     {
-        outFile << "[Cube_" << obj.id << "]" << endl;
+        outFile << "[Object_" << obj.id << "]" << endl;
         outFile << "Name=" << obj.name << endl;
+        outFile << "ShapeType=" << static_cast<int>(obj.type) << endl;
         outFile << "Position=" << obj.position.x << " " << obj.position.y << " " << obj.position.z << endl;
         outFile << "Rotation=" << obj.rotation.x << " " << obj.rotation.y << " " << obj.rotation.z << endl;
         outFile << "Scale=" << obj.scale.x << " " << obj.scale.y << " " << obj.scale.z << endl;
         outFile << "AutoRotate=" << obj.enableAutoRotation << endl;
         outFile << "UseLighting=" << obj.applyLighting << endl;
-        outFile << endl; 
+        outFile << endl;
     }
 
     outFile.close();
@@ -784,7 +942,7 @@ void ReadSceneFromFile(const string& filepath)
 {
     ifstream inFile(filepath);
 
-    if (!inFile.is_open()) 
+    if (!inFile.is_open())
     {
         MessageBox(hWnd, L"Failed to open file for reading.", L"Error", MB_OK);
 
@@ -800,23 +958,23 @@ void ReadSceneFromFile(const string& filepath)
 
     while (getline(inFile, line))
     {
-        if (line.find("[Scene]") != string::npos) 
+        if (line.find("[Scene]") != string::npos)
         {
             continue;
         }
-        if (line.find("NextObjectID=") != string::npos) 
+        if (line.find("NextObjectID=") != string::npos)
         {
             g_nextObjectID = stoi(line.substr(line.find("=") + 1));
         }
-        if (line.find("ObjectCount=") != string::npos) 
+        if (line.find("ObjectCount=") != string::npos)
         {
             objectCount = stoi(line.substr(line.find("=") + 1));
 
-            break; 
+            break;
         }
     }
 
-    if (objectCount == 0) 
+    if (objectCount == 0)
     {
         inFile.close();
 
@@ -826,10 +984,10 @@ void ReadSceneFromFile(const string& filepath)
     for (int i = 0; i < objectCount; ++i)
     {
         int currentId = -1;
- 
-        while (getline(inFile, line)) 
+
+        while (getline(inFile, line))
         {
-            if (line.find("[Cube_") != string::npos) 
+            if (line.find("[Object_") != string::npos)
             {
                 string idStr = line.substr(line.find("_") + 1, line.find("]") - line.find("_") - 1);
 
@@ -839,14 +997,20 @@ void ReadSceneFromFile(const string& filepath)
             }
         }
 
-        if (currentId == -1)
-        {
-            continue;
-        }
+        if (currentId == -1) continue;
 
-        SceneObject newObj(currentId);
+        ShapeType tempType = ShapeType::Cube;
 
-        while (getline(inFile, line) && !line.empty()) 
+        string tempName = "";
+
+        XMFLOAT3 tempPos = { 0.0f, 0.5f, 0.0f };
+        XMFLOAT3 tempRot = { 0.0f, 0.0f, 0.0f };
+        XMFLOAT3 tempScl = { 1.0f, 1.0f, 1.0f };
+
+        bool tempAutoRot = false;
+        bool tempLighting = false;
+
+        while (getline(inFile, line) && !line.empty())
         {
             size_t separatorPos = line.find("=");
 
@@ -859,31 +1023,48 @@ void ReadSceneFromFile(const string& filepath)
             string value = line.substr(separatorPos + 1);
             stringstream ss(value);
 
-            if (key == "Name") 
+            if (key == "Name")
             {
-                newObj.name = value;
+                tempName = value;
             }
-            else if (key == "Position") 
+            else if (key == "ShapeType")
             {
-                ss >> newObj.position.x >> newObj.position.y >> newObj.position.z;
+                tempType = static_cast<ShapeType>(stoi(value));
             }
-            else if (key == "Rotation") 
+            else if (key == "Position")
             {
-                ss >> newObj.rotation.x >> newObj.rotation.y >> newObj.rotation.z;
+                ss >> tempPos.x >> tempPos.y >> tempPos.z;
             }
-            else if (key == "Scale") 
+            else if (key == "Rotation")
             {
-                ss >> newObj.scale.x >> newObj.scale.y >> newObj.scale.z;
+                ss >> tempRot.x >> tempRot.y >> tempRot.z;
             }
-            else if (key == "AutoRotate") 
+            else if (key == "Scale")
             {
-                newObj.enableAutoRotation = stoi(value);
+                ss >> tempScl.x >> tempScl.y >> tempScl.z;
             }
-            else if (key == "UseLighting") 
+            else if (key == "AutoRotate")
             {
-                newObj.applyLighting = stoi(value);
+                tempAutoRot = stoi(value);
+            }
+            else if (key == "UseLighting")
+            {
+                tempLighting = stoi(value);
             }
         }
+
+        SceneObject newObj(currentId, tempType);
+
+        if (!tempName.empty()) 
+        {
+            newObj.name = tempName;
+        }
+
+        newObj.position = tempPos;
+        newObj.rotation = tempRot;
+        newObj.scale = tempScl;
+        newObj.enableAutoRotation = tempAutoRot;
+        newObj.applyLighting = tempLighting;
 
         g_sceneObjects.push_back(newObj);
     }
@@ -986,17 +1167,53 @@ void InitD3D()
     D3D11CreateDeviceAndSwapChain(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0, D3D11_SDK_VERSION, &scd, &swapChain, &device, nullptr, &context);
 
     GetClientRect(hWnd, &rc);
+
     ResizeSwapChain(rc.right - rc.left, rc.bottom - rc.top);
 
-    D3D11_BUFFER_DESC vbd = { sizeof(vertices), D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER };
-    D3D11_SUBRESOURCE_DATA vinit = { vertices };
+    vector<Vertex> tempVertices;
+    vector<UINT> tempIndices;
 
-    device->CreateBuffer(&vbd, &vinit, &vertexBuffer);
+    CreateCube(tempVertices, tempIndices);
 
-    D3D11_BUFFER_DESC ibd = { sizeof(indices), D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER };
-    D3D11_SUBRESOURCE_DATA iinit = { indices };
+    g_meshes[ShapeType::Cube].indexCount = tempIndices.size();
 
-    device->CreateBuffer(&ibd, &iinit, &indexBuffer);
+    D3D11_BUFFER_DESC vbd = { (UINT)(sizeof(Vertex) * tempVertices.size()), D3D11_USAGE_DEFAULT, D3D11_BIND_VERTEX_BUFFER };
+    D3D11_SUBRESOURCE_DATA vinit = { tempVertices.data() };
+
+    device->CreateBuffer(&vbd, &vinit, &g_meshes[ShapeType::Cube].vertexBuffer);
+
+    D3D11_BUFFER_DESC ibd = { (UINT)(sizeof(UINT) * tempIndices.size()), D3D11_USAGE_DEFAULT, D3D11_BIND_INDEX_BUFFER };
+    D3D11_SUBRESOURCE_DATA iinit = { tempIndices.data() };
+
+    device->CreateBuffer(&ibd, &iinit, &g_meshes[ShapeType::Cube].indexBuffer);
+
+    CreatePyramid(tempVertices, tempIndices);
+
+    g_meshes[ShapeType::Pyramid].indexCount = tempIndices.size();
+
+    vbd.ByteWidth = (UINT)(sizeof(Vertex) * tempVertices.size());
+    vinit.pSysMem = tempVertices.data();
+
+    device->CreateBuffer(&vbd, &vinit, &g_meshes[ShapeType::Pyramid].vertexBuffer);
+
+    ibd.ByteWidth = (UINT)(sizeof(UINT) * tempIndices.size());
+    iinit.pSysMem = tempIndices.data();
+
+    device->CreateBuffer(&ibd, &iinit, &g_meshes[ShapeType::Pyramid].indexBuffer);
+
+    CreateSphere(tempVertices, tempIndices, 0.5f, 20, 20); 
+
+    g_meshes[ShapeType::Sphere].indexCount = tempIndices.size();
+
+    vbd.ByteWidth = (UINT)(sizeof(Vertex) * tempVertices.size());
+    vinit.pSysMem = tempVertices.data();
+
+    device->CreateBuffer(&vbd, &vinit, &g_meshes[ShapeType::Sphere].vertexBuffer);
+
+    ibd.ByteWidth = (UINT)(sizeof(UINT) * tempIndices.size());
+    iinit.pSysMem = tempIndices.data();
+
+    device->CreateBuffer(&ibd, &iinit, &g_meshes[ShapeType::Sphere].indexBuffer);
 
     D3D11_BUFFER_DESC cbd = { sizeof(ConstantBufferData), D3D11_USAGE_DEFAULT, D3D11_BIND_CONSTANT_BUFFER };
 
@@ -1027,16 +1244,16 @@ void InitD3D()
 
     D3DCompile(vsSource, strlen(vsSource), 0, 0, 0, "main", "vs_5_0", 0, 0, &vsBlob, &err);
 
-    if (err)
-    {
-        PrintShaderError(err);
+    if (err) 
+    { 
+        PrintShaderError(err); 
     }
 
     D3DCompile(psSource, strlen(psSource), 0, 0, 0, "main", "ps_5_0", 0, 0, &psBlob, &err);
 
-    if (err)
-    {
-        PrintShaderError(err);
+    if (err) 
+    { 
+        PrintShaderError(err); 
     }
 
     device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
@@ -1046,32 +1263,32 @@ void InitD3D()
 
     D3DCompile(psOutlineSource, strlen(psOutlineSource), 0, 0, 0, "main", "ps_5_0", 0, 0, &opsBlob, &err);
 
-    if (err)
-    {
-        PrintShaderError(err);
+    if (err) 
+    { 
+        PrintShaderError(err); 
     }
 
     device->CreatePixelShader(opsBlob->GetBufferPointer(), opsBlob->GetBufferSize(), nullptr, &outlinePixelShader);
 
-    if (opsBlob)
-    {
-        opsBlob->Release();
+    if (opsBlob) 
+    { 
+        opsBlob->Release(); 
     }
 
     ID3DBlob* greyPsBlob = nullptr;
 
     D3DCompile(psGreySource, strlen(psGreySource), 0, 0, 0, "main", "ps_5_0", 0, 0, &greyPsBlob, &err);
 
-    if (err)
-    {
-        PrintShaderError(err);
+    if (err) 
+    { 
+        PrintShaderError(err); 
     }
 
     device->CreatePixelShader(greyPsBlob->GetBufferPointer(), greyPsBlob->GetBufferSize(), nullptr, &greyPixelShader);
 
-    if (greyPsBlob)
-    {
-        greyPsBlob->Release();
+    if (greyPsBlob) 
+    { 
+        greyPsBlob->Release(); 
     }
 
     D3D11_RASTERIZER_DESC ord = {};
@@ -1082,7 +1299,7 @@ void InitD3D()
 
     device->CreateRasterizerState(&ord, &outlineRasterState);
 
-    D3D11_INPUT_ELEMENT_DESC ld[] = 
+    D3D11_INPUT_ELEMENT_DESC ld[] =
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
         {"COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -1091,13 +1308,13 @@ void InitD3D()
 
     device->CreateInputLayout(ld, _countof(ld), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
 
-    if (vsBlob)
-    {
-        vsBlob->Release();
+    if (vsBlob) 
+    { 
+        vsBlob->Release(); 
     }
-    if (psBlob)
-    {
-        psBlob->Release();
+    if (psBlob) 
+    { 
+        psBlob->Release(); 
     }
 
     D3D11_RASTERIZER_DESC rd = {};
@@ -1107,7 +1324,6 @@ void InitD3D()
     rd.DepthClipEnable = TRUE;
 
     device->CreateRasterizerState(&rd, &rasterState);
-
     context->RSSetState(rasterState);
 
     IMGUI_CHECKVERSION();
