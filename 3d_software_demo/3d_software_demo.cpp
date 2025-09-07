@@ -107,7 +107,7 @@ struct SceneObject
     ShapeType type;
 
     XMFLOAT3 position = { 0.0f, 0.5f, 0.0f };
-    XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f }; 
+    XMFLOAT3 rotation = { 0.0f, 0.0f, 0.0f };
     XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
 
     bool enableAutoRotation = false;
@@ -119,15 +119,15 @@ struct SceneObject
     {
         switch (type)
         {
-        case ShapeType::Cube:    
+        case ShapeType::Cube:
 
             name = "Cube " + to_string(id); break;
 
-        case ShapeType::Pyramid: 
+        case ShapeType::Pyramid:
 
             name = "Pyramid " + to_string(id); break;
 
-        case ShapeType::Sphere:  
+        case ShapeType::Sphere:
 
             name = "Sphere " + to_string(id); break;
         }
@@ -136,12 +136,12 @@ struct SceneObject
 
 vector<SceneObject> g_sceneObjects;
 
-int g_selectedObjectIndex = -1; 
+int g_selectedObjectIndex = -1;
 int g_nextObjectID = 1;
 
 void CreateCube(vector<Vertex>& outVertices, vector<UINT>& outIndices)
 {
-    outVertices = 
+    outVertices =
     {
         { {-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
         { {-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
@@ -169,7 +169,7 @@ void CreateCube(vector<Vertex>& outVertices, vector<UINT>& outIndices)
         { { 0.5f, -0.5f,  0.5f}, {1.0f, 0.0f, 1.0f}, { 1.0f, 0.0f, 0.0f} }
     };
 
-    outIndices = 
+    outIndices =
     {
         0,1,2, 0,2,3, 4,5,6, 4,6,7, 8,9,10, 8,10,11, 12,13,14, 12,14,15, 16,17,18, 16,18,19, 20,21,22, 20,22,23
     };
@@ -177,22 +177,22 @@ void CreateCube(vector<Vertex>& outVertices, vector<UINT>& outIndices)
 
 void CreatePyramid(vector<Vertex>& outVertices, vector<UINT>& outIndices)
 {
-    outVertices = 
+    outVertices =
     {
-        { {-0.5f, 0.0f,  0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} }, 
-        { { 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
-        { { 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} }, 
+        { {-0.5f, 0.0f,  0.5f}, {1.0f, 1.0f, 0.0f}, {0.0f, -1.0f, 0.0f} },
+        { { 0.5f, 0.0f,  0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
+        { { 0.5f, 0.0f, -0.5f}, {1.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
         { {-0.5f, 0.0f, -0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, -1.0f, 0.0f} },
 
         { {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f} },
-        { {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} }, 
-        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },  
-        { {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }  
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f, 0.0f} },
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 1.0f} },
+        { {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {-1.0f, 0.0f, 0.0f} }
     };
 
-    outIndices = 
+    outIndices =
     {
-        0, 1, 2, 0, 2, 3, 3, 2, 4, 2, 1, 5, 1, 0, 6, 0, 3, 7  
+        0, 1, 2, 0, 2, 3, 3, 2, 4, 2, 1, 5, 1, 0, 6, 0, 3, 7
     };
 }
 
@@ -491,78 +491,120 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
     }
 
-    switch (msg) 
+    switch (msg)
     {
-        case WM_SIZE:
+    case WM_SIZE:
+    {
+        if (device != nullptr && wParam != SIZE_MINIMIZED)
         {
-            if (device != nullptr && wParam != SIZE_MINIMIZED)
-            {
-                ResizeSwapChain(LOWORD(lParam), HIWORD(lParam));
-            }
+            ResizeSwapChain(LOWORD(lParam), HIWORD(lParam));
+        }
 
+        return 0;
+    }
+    case WM_LBUTTONDOWN:
+    {
+        if (ImGui::GetIO().WantCaptureMouse || g_sceneObjects.empty())
+        {
             return 0;
         }
-        case WM_LBUTTONDOWN:
+
+        RECT clientRect;
+
+        GetClientRect(hWnd, &clientRect);
+
+        int mouseX = LOWORD(lParam);
+        int mouseY = HIWORD(lParam);
+
+        XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)(clientRect.right - clientRect.left) / (clientRect.bottom - clientRect.top), 0.1f, 100.0f);
+        XMMATRIX view = XMMatrixLookAtLH(g_cameraPos, g_cameraPos + g_cameraForward, g_cameraUp);
+        XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
+
+        float ndcX = (2.0f * mouseX / (clientRect.right - clientRect.left)) - 1.0f;
+        float ndcY = 1.0f - (2.0f * mouseY / (clientRect.bottom - clientRect.top));
+
+        XMVECTOR rayDir = XMVector3Normalize(XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), invViewProj) - g_cameraPos);
+
+        g_selectedObjectIndex = -1;
+
+        float closestDist = FLT_MAX;
+
+        for (int i = 0; i < g_sceneObjects.size(); ++i)
         {
-            if (ImGui::GetIO().WantCaptureMouse || g_sceneObjects.empty())
+            SceneObject& obj = g_sceneObjects[i];
+
+            XMVECTOR objPosVec = XMLoadFloat3(&obj.position);
+            XMVECTOR objScaleVec = XMLoadFloat3(&obj.scale);
+            XMVECTOR halfSize = XMVectorSet(0.5f, 0.5f, 0.5f, 0.0f) * objScaleVec;
+
+            float dist;
+
+            if (IntersectRayAABB(g_cameraPos, rayDir, objPosVec - halfSize, objPosVec + halfSize, dist))
             {
-                return 0;
-            }
-
-            RECT clientRect;
-
-            GetClientRect(hWnd, &clientRect);
-
-            int mouseX = LOWORD(lParam);
-            int mouseY = HIWORD(lParam);
-
-            XMMATRIX proj = XMMatrixPerspectiveFovLH(XM_PIDIV4, (float)(clientRect.right - clientRect.left) / (clientRect.bottom - clientRect.top), 0.1f, 100.0f);
-            XMMATRIX view = XMMatrixLookAtLH(g_cameraPos, g_cameraPos + g_cameraForward, g_cameraUp);
-            XMMATRIX invViewProj = XMMatrixInverse(nullptr, view * proj);
-
-            float ndcX = (2.0f * mouseX / (clientRect.right - clientRect.left)) - 1.0f;
-            float ndcY = 1.0f - (2.0f * mouseY / (clientRect.bottom - clientRect.top));
-
-            XMVECTOR rayDir = XMVector3Normalize(XMVector3TransformCoord(XMVectorSet(ndcX, ndcY, 1.0f, 1.0f), invViewProj) - g_cameraPos);
-
-            g_selectedObjectIndex = -1; 
-
-            float closestDist = FLT_MAX;
-
-            for (int i = 0; i < g_sceneObjects.size(); ++i)
-            {
-                SceneObject& obj = g_sceneObjects[i];
-
-                XMVECTOR objPosVec = XMLoadFloat3(&obj.position);
-                XMVECTOR objScaleVec = XMLoadFloat3(&obj.scale);
-                XMVECTOR halfSize = XMVectorSet(0.5f, 0.5f, 0.5f, 0.0f) * objScaleVec;
-
-                float dist;
-
-                if (IntersectRayAABB(g_cameraPos, rayDir, objPosVec - halfSize, objPosVec + halfSize, dist))
+                if (dist < closestDist)
                 {
-                    if (dist < closestDist)
-                    {
-                        closestDist = dist;
+                    closestDist = dist;
 
-                        g_selectedObjectIndex = i;
-                    }
+                    g_selectedObjectIndex = i;
                 }
             }
+        }
+        return 0;
+    }
+    case WM_RBUTTONDOWN:
+    {
+        if (ImGui::GetIO().WantCaptureMouse)
+        {
             return 0;
         }
-        case WM_RBUTTONDOWN:
+
+        g_mouseCaptured = true;
+
+        SetCapture(hWnd);
+        ShowCursor(FALSE);
+
+        RECT rect;
+
+        GetClientRect(hWnd, &rect);
+
+        POINT center = { rect.right / 2, rect.bottom / 2 };
+
+        ClientToScreen(hWnd, &center);
+        SetCursorPos(center.x, center.y);
+
+        return 0;
+    }
+    case WM_RBUTTONUP:
+    {
+        g_mouseCaptured = false;
+
+        ReleaseCapture();
+        ShowCursor(TRUE);
+
+        return 0;
+    }
+    case WM_KEYDOWN:
+    {
+        if (wParam < 256)
         {
-            if (ImGui::GetIO().WantCaptureMouse)
-            {
-                return 0;
-            }
+            keys[wParam] = true;
+        }
 
-            g_mouseCaptured = true;
+        return 0;
+    }
+    case WM_KEYUP:
+    {
+        if (wParam < 256)
+        {
+            keys[wParam] = false;
+        }
 
-            SetCapture(hWnd);
-            ShowCursor(FALSE);
-
+        return 0;
+    }
+    case WM_MOUSEMOVE:
+    {
+        if (g_mouseCaptured)
+        {
             RECT rect;
 
             GetClientRect(hWnd, &rect);
@@ -570,76 +612,34 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             POINT center = { rect.right / 2, rect.bottom / 2 };
 
             ClientToScreen(hWnd, &center);
-            SetCursorPos(center.x, center.y);
 
-            return 0;
-        }
-        case WM_RBUTTONUP:
-        {
-            g_mouseCaptured = false;
+            POINT currentMousePos;
 
-            ReleaseCapture();
-            ShowCursor(TRUE);
+            GetCursorPos(&currentMousePos);
 
-            return 0;
-        }
-        case WM_KEYDOWN:
-        {
-            if (wParam < 256)
+            float dx = (float)(currentMousePos.x - center.x);
+            float dy = (float)(currentMousePos.y - center.y);
+
+            if (dx != 0 || dy != 0)
             {
-                keys[wParam] = true;
+                float sens = 0.002f;
+
+                g_yaw += dx * sens;
+                g_pitch += dy * sens;
+                g_pitch = max(-XM_PIDIV2 + 0.1f, min(XM_PIDIV2 - 0.1f, g_pitch));
+
+                SetCursorPos(center.x, center.y);
             }
-
-            return 0;
         }
-        case WM_KEYUP:
-        {
-            if (wParam < 256)
-            {
-                keys[wParam] = false;
-            }
 
-            return 0;
-        }
-        case WM_MOUSEMOVE:
-        {
-            if (g_mouseCaptured)
-            {
-                RECT rect;
+        return 0;
+    }
+    case WM_DESTROY:
+    {
+        PostQuitMessage(0);
 
-                GetClientRect(hWnd, &rect);
-
-                POINT center = { rect.right / 2, rect.bottom / 2 };
-
-                ClientToScreen(hWnd, &center);
-
-                POINT currentMousePos;
-
-                GetCursorPos(&currentMousePos);
-
-                float dx = (float)(currentMousePos.x - center.x);
-                float dy = (float)(currentMousePos.y - center.y);
-
-                if (dx != 0 || dy != 0)
-                {
-                    float sens = 0.002f;
-
-                    g_yaw += dx * sens;
-                    g_pitch += dy * sens;
-                    g_pitch = max(-XM_PIDIV2 + 0.1f, min(XM_PIDIV2 - 0.1f, g_pitch));
-
-                    SetCursorPos(center.x, center.y);
-                }
-            }
-
-            return 0;
-        }
-        case WM_DESTROY:
-        {
-            PostQuitMessage(0);
-
-            return 0;
-        }
+        return 0;
+    }
     }
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
@@ -711,6 +711,9 @@ void Render()
         ImGui::EndMainMenuBar();
     }
 
+    ImGui::SetNextWindowPos(ImVec2(20, 40), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(300, 250), ImGuiCond_FirstUseEver);
+
     ImGui::Begin("Scene Controls");
 
     const char* items[] = { "Cube", "Pyramid", "Sphere" };
@@ -740,9 +743,17 @@ void Render()
 
     if (g_selectedObjectIndex != -1)
     {
+        const ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+        ImVec2 right_panel_pos = ImVec2(main_viewport->WorkPos.x + main_viewport->WorkSize.x - 320, main_viewport->WorkPos.y + 40);
+
+        ImGui::SetNextWindowPos(right_panel_pos, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(300, 350), ImGuiCond_FirstUseEver);
+
         SceneObject& selectedObj = g_sceneObjects[g_selectedObjectIndex];
 
         ImGui::Begin("Object Properties", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
         ImGui::Text("%s", selectedObj.name.c_str());
         ImGui::Separator();
         ImGui::SliderFloat3("Position", &selectedObj.position.x, -10.0f, 10.0f);
@@ -757,7 +768,7 @@ void Render()
         {
             g_sceneObjects.erase(g_sceneObjects.begin() + g_selectedObjectIndex);
 
-            g_selectedObjectIndex = -1; 
+            g_selectedObjectIndex = -1;
         }
 
         ImGui::End();
@@ -860,7 +871,7 @@ void SaveScene()
 {
     OPENFILENAMEA ofn;
 
-    char szFile[260] = "scene.ini"; 
+    char szFile[260] = "scene.ini";
 
     ZeroMemory(&ofn, sizeof(ofn));
 
@@ -935,6 +946,13 @@ void WriteSceneToFile(const string& filepath)
         outFile << endl;
     }
 
+    size_t ini_size = 0;
+
+    const char* imgui_ini_data = ImGui::SaveIniSettingsToMemory(&ini_size);
+
+    outFile << "[ImGuiLayout]" << endl;
+    outFile << string(imgui_ini_data, ini_size) << endl;
+
     outFile.close();
 }
 
@@ -945,7 +963,6 @@ void ReadSceneFromFile(const string& filepath)
     if (!inFile.is_open())
     {
         MessageBox(hWnd, L"Failed to open file for reading.", L"Error", MB_OK);
-
         return;
     }
 
@@ -953,64 +970,47 @@ void ReadSceneFromFile(const string& filepath)
     g_selectedObjectIndex = -1;
 
     string line;
+    string layout_data; 
 
-    int objectCount = 0;
+    SceneObject* currentObject = nullptr;
+
+    bool isReadingLayout = false;
 
     while (getline(inFile, line))
     {
+
         if (line.find("[Scene]") != string::npos)
         {
-            continue;
+            currentObject = nullptr;
+
+            isReadingLayout = false;
         }
-        if (line.find("NextObjectID=") != string::npos)
+        else if (line.find("[Object_") != string::npos)
         {
-            g_nextObjectID = stoi(line.substr(line.find("=") + 1));
+            isReadingLayout = false;
+
+            string idStr = line.substr(line.find("_") + 1, line.find("]") - line.find("_") - 1);
+
+            int currentId = stoi(idStr);
+
+            g_sceneObjects.emplace_back(currentId, ShapeType::Cube);
+
+            currentObject = &g_sceneObjects.back();
         }
-        if (line.find("ObjectCount=") != string::npos)
+        else if (line.find("[ImGuiLayout]") != string::npos)
         {
-            objectCount = stoi(line.substr(line.find("=") + 1));
+            currentObject = nullptr;
 
-            break;
+            isReadingLayout = true;
+
+            continue; 
         }
-    }
 
-    if (objectCount == 0)
-    {
-        inFile.close();
-
-        return;
-    }
-
-    for (int i = 0; i < objectCount; ++i)
-    {
-        int currentId = -1;
-
-        while (getline(inFile, line))
+        if (isReadingLayout)
         {
-            if (line.find("[Object_") != string::npos)
-            {
-                string idStr = line.substr(line.find("_") + 1, line.find("]") - line.find("_") - 1);
-
-                currentId = stoi(idStr);
-
-                break;
-            }
+            layout_data += line + "\n";
         }
-
-        if (currentId == -1) continue;
-
-        ShapeType tempType = ShapeType::Cube;
-
-        string tempName = "";
-
-        XMFLOAT3 tempPos = { 0.0f, 0.5f, 0.0f };
-        XMFLOAT3 tempRot = { 0.0f, 0.0f, 0.0f };
-        XMFLOAT3 tempScl = { 1.0f, 1.0f, 1.0f };
-
-        bool tempAutoRot = false;
-        bool tempLighting = false;
-
-        while (getline(inFile, line) && !line.empty())
+        else if (currentObject != nullptr)
         {
             size_t separatorPos = line.find("=");
 
@@ -1023,50 +1023,47 @@ void ReadSceneFromFile(const string& filepath)
             string value = line.substr(separatorPos + 1);
             stringstream ss(value);
 
-            if (key == "Name")
-            {
-                tempName = value;
+            if (key == "Name") 
+            { 
+                currentObject->name = value; 
             }
-            else if (key == "ShapeType")
-            {
-                tempType = static_cast<ShapeType>(stoi(value));
+            else if (key == "ShapeType") 
+            { 
+                currentObject->type = static_cast<ShapeType>(stoi(value)); 
             }
-            else if (key == "Position")
-            {
-                ss >> tempPos.x >> tempPos.y >> tempPos.z;
+            else if (key == "Position") 
+            { 
+                ss >> currentObject->position.x >> currentObject->position.y >> currentObject->position.z; 
             }
-            else if (key == "Rotation")
-            {
-                ss >> tempRot.x >> tempRot.y >> tempRot.z;
+            else if (key == "Rotation") 
+            { 
+                ss >> currentObject->rotation.x >> currentObject->rotation.y >> currentObject->rotation.z; 
             }
-            else if (key == "Scale")
-            {
-                ss >> tempScl.x >> tempScl.y >> tempScl.z;
+            else if (key == "Scale") 
+            { 
+                ss >> currentObject->scale.x >> currentObject->scale.y >> currentObject->scale.z; 
             }
-            else if (key == "AutoRotate")
-            {
-                tempAutoRot = stoi(value);
+            else if (key == "AutoRotate") 
+            { 
+                currentObject->enableAutoRotation = stoi(value); 
             }
-            else if (key == "UseLighting")
-            {
-                tempLighting = stoi(value);
+            else if (key == "UseLighting") 
+            { 
+                currentObject->applyLighting = stoi(value); 
             }
         }
-
-        SceneObject newObj(currentId, tempType);
-
-        if (!tempName.empty()) 
+        else
         {
-            newObj.name = tempName;
+            if (line.find("NextObjectID=") != string::npos)
+            {
+                g_nextObjectID = stoi(line.substr(line.find("=") + 1));
+            }
         }
+    }
 
-        newObj.position = tempPos;
-        newObj.rotation = tempRot;
-        newObj.scale = tempScl;
-        newObj.enableAutoRotation = tempAutoRot;
-        newObj.applyLighting = tempLighting;
-
-        g_sceneObjects.push_back(newObj);
+    if (!layout_data.empty())
+    {
+        ImGui::LoadIniSettingsFromMemory(layout_data.c_str(), layout_data.size());
     }
 
     inFile.close();
@@ -1201,7 +1198,7 @@ void InitD3D()
 
     device->CreateBuffer(&ibd, &iinit, &g_meshes[ShapeType::Pyramid].indexBuffer);
 
-    CreateSphere(tempVertices, tempIndices, 0.5f, 20, 20); 
+    CreateSphere(tempVertices, tempIndices, 0.5f, 20, 20);
 
     g_meshes[ShapeType::Sphere].indexCount = tempIndices.size();
 
@@ -1244,16 +1241,16 @@ void InitD3D()
 
     D3DCompile(vsSource, strlen(vsSource), 0, 0, 0, "main", "vs_5_0", 0, 0, &vsBlob, &err);
 
-    if (err) 
-    { 
-        PrintShaderError(err); 
+    if (err)
+    {
+        PrintShaderError(err);
     }
 
     D3DCompile(psSource, strlen(psSource), 0, 0, 0, "main", "ps_5_0", 0, 0, &psBlob, &err);
 
-    if (err) 
-    { 
-        PrintShaderError(err); 
+    if (err)
+    {
+        PrintShaderError(err);
     }
 
     device->CreateVertexShader(vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), nullptr, &vertexShader);
@@ -1263,32 +1260,32 @@ void InitD3D()
 
     D3DCompile(psOutlineSource, strlen(psOutlineSource), 0, 0, 0, "main", "ps_5_0", 0, 0, &opsBlob, &err);
 
-    if (err) 
-    { 
-        PrintShaderError(err); 
+    if (err)
+    {
+        PrintShaderError(err);
     }
 
     device->CreatePixelShader(opsBlob->GetBufferPointer(), opsBlob->GetBufferSize(), nullptr, &outlinePixelShader);
 
-    if (opsBlob) 
-    { 
-        opsBlob->Release(); 
+    if (opsBlob)
+    {
+        opsBlob->Release();
     }
 
     ID3DBlob* greyPsBlob = nullptr;
 
     D3DCompile(psGreySource, strlen(psGreySource), 0, 0, 0, "main", "ps_5_0", 0, 0, &greyPsBlob, &err);
 
-    if (err) 
-    { 
-        PrintShaderError(err); 
+    if (err)
+    {
+        PrintShaderError(err);
     }
 
     device->CreatePixelShader(greyPsBlob->GetBufferPointer(), greyPsBlob->GetBufferSize(), nullptr, &greyPixelShader);
 
-    if (greyPsBlob) 
-    { 
-        greyPsBlob->Release(); 
+    if (greyPsBlob)
+    {
+        greyPsBlob->Release();
     }
 
     D3D11_RASTERIZER_DESC ord = {};
@@ -1308,13 +1305,13 @@ void InitD3D()
 
     device->CreateInputLayout(ld, _countof(ld), vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), &inputLayout);
 
-    if (vsBlob) 
-    { 
-        vsBlob->Release(); 
+    if (vsBlob)
+    {
+        vsBlob->Release();
     }
-    if (psBlob) 
-    { 
-        psBlob->Release(); 
+    if (psBlob)
+    {
+        psBlob->Release();
     }
 
     D3D11_RASTERIZER_DESC rd = {};
@@ -1331,6 +1328,7 @@ void InitD3D()
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();(void)io;
+    io.IniFilename = NULL;
 
     ImGui::StyleColorsDark();
 
