@@ -214,7 +214,7 @@ void Renderer::RenderFrame(Scene& scene)
             m_context->RSSetState(m_outlineRasterState);
             m_context->PSSetShader(m_outlinePixelShader, 0, 0);
 
-            DirectX::XMMATRIX outlineModel = obj.GetTransformMatrix() * DirectX::XMMatrixScaling(1.08f, 1.08f, 1.08f);
+            DirectX::XMMATRIX outlineModel = DirectX::XMMatrixScaling(1.08f, 1.08f, 1.08f) * obj.GetTransformMatrix();
 
             ConstantBufferData cb;
 
